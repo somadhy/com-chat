@@ -112,6 +112,13 @@ You can create multiple tabs (for now by opening ports sequentially and reusing 
   - `i` for system info,
   - `!` for errors.
 
+Line endings and echo behavior:
+
+- Commands are terminated with **CRLF (`\r\n`)**, matching typical terminal settings (e.g. PuTTY default).
+- Many devices echo back the command text before responding. COMChat:
+  - shows your command as `> ...` only when **Echo: On**;
+  - **always suppresses** the device echo line if it is exactly equal to the last command, so в чат попадает только реальный ответ.
+
 #### Command history
 
 - COMChat remembers all commands you send.
