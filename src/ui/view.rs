@@ -1,13 +1,13 @@
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::Line,
-    widgets::{Block, Borders, Paragraph, Tabs},
+    widgets::{Block, Borders, Clear, Paragraph, Tabs},
     Frame,
 };
 
 use crate::core::{ChatMessage, MessageKind};
-use crate::ui::app::App;
+use crate::ui::app::{App, PortSelectorState, UiMode};
 
 pub fn draw(f: &mut Frame, app: &App) {
     let size = f.area();
@@ -61,20 +61,93 @@ pub fn draw(f: &mut Frame, app: &App) {
     f.render_widget(input_widget, chunks[2]);
 
     // Status bar
-    let status_text = "COMChat - press Esc to quit";
+    let active = app.tabs.get(app.active_tab);
+    let port_label = active
+        .and_then(|t| t.port_id.map(|_| t.title.clone()))
+        .unwrap_or_else(|| "No Port".to_string());
+    let echo_label = if app.echo { "On" } else { "Off" };
+    let status_text = format!(
+        "COMChat | Port: {port_label} | Echo: {echo_label} | Esc: quit, Ctrl+E: echo, Ctrl+P: ports, Tab/Shift+Tab: switch tab"
+    );
     let status = Paragraph::new(status_text)
         .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD));
     f.render_widget(status, chunks[3]);
+
+    // Optional port selector overlay
+    if let UiMode::PortSelector(state) = &app.mode {
+        draw_port_selector(f, state);
+    }
 }
 
 fn format_message(msg: &ChatMessage) -> Line<'static> {
+    use chrono::{DateTime, Local};
+
+    let dt: DateTime<Local> = msg.timestamp.into();
+    let time_str = dt.format("%H:%M:%S").to_string();
+
     let prefix = match msg.kind {
-        MessageKind::UserCommand => "> ",
-        MessageKind::DeviceResponse => "< ",
-        MessageKind::SystemInfo => "i ",
-        MessageKind::Error => "! ",
+        MessageKind::UserCommand => ">",
+        MessageKind::DeviceResponse => "<",
+        MessageKind::SystemInfo => "i",
+        MessageKind::Error => "!",
     };
-    // Timestamp formatting can be added later; keep it simple for now.
-    Line::from(format!("{prefix}{}", msg.text))
+
+    Line::from(format!("[{time_str}] {prefix} {}", msg.text))
+}
+
+fn draw_port_selector(f: &mut Frame, state: &PortSelectorState) {
+    let area = centered_rect(60, 60, f.area());
+
+    // Clear underlying area
+    f.render_widget(Clear, area);
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title("Select Port (Up/Down ports, +/- baud, P parity, S stop bits, F flow, Enter=Open, Esc=Cancel)");
+
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+
+    let mut lines = Vec::new();
+    for (idx, port) in state.ports.iter().enumerate() {
+        let marker = if idx == state.selected { ">" } else { " " };
+        lines.push(Line::from(format!("{marker} {}", port.label)));
+    }
+    lines.push(Line::from("".to_string()));
+    lines.push(Line::from(format!(
+        "Baud: {} | Parity: {:?} | Stop: {:?} | Flow: {:?}",
+        state.baud_rate, state.parity, state.stop_bits, state.flow_control
+    )));
+
+    let list = Paragraph::new(lines);
+    f.render_widget(list, inner);
+}
+
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            [
+                Constraint::Percentage((100 - percent_y) / 2),
+                Constraint::Percentage(percent_y),
+                Constraint::Percentage((100 - percent_y) / 2),
+            ]
+            .as_ref(),
+        )
+        .split(r);
+
+    let vertical = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(
+            [
+                Constraint::Percentage((100 - percent_x) / 2),
+                Constraint::Percentage(percent_x),
+                Constraint::Percentage((100 - percent_x) / 2),
+            ]
+            .as_ref(),
+        )
+        .split(popup_layout[1]);
+
+    vertical[1]
 }
 

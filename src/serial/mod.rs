@@ -3,17 +3,20 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
 
-use serialport::{DataBits, FlowControl as SpFlow, Parity as SpParity, SerialPort, StopBits as SpStopBits};
+use serialport::{
+    DataBits, FlowControl as SpFlow, Parity as SpParity, SerialPort, StopBits as SpStopBits,
+};
 
 use crate::core::{AppEvent, AppEventSender, PortId, SerialConfig};
 use crate::error::{AppError, Result};
 
-#[derive(Debug)]
+#[allow(dead_code)]
 pub enum SerialCommand {
     Write(Vec<u8>),
     Close,
 }
 
+#[allow(dead_code)]
 pub struct SerialWorkerHandle {
     pub id: PortId,
     pub name: String,
@@ -21,6 +24,7 @@ pub struct SerialWorkerHandle {
     pub join_handle: thread::JoinHandle<()>,
 }
 
+#[allow(dead_code)]
 pub fn spawn_serial_worker(
     port_id: PortId,
     config: SerialConfig,
@@ -29,7 +33,7 @@ pub fn spawn_serial_worker(
     let port_name = config.port_name.clone();
     let timeout = Duration::from_millis(config.timeout_ms);
 
-    let mut builder = serialport::new(&config.port_name, config.baud_rate)
+    let builder = serialport::new(&config.port_name, config.baud_rate)
         .timeout(timeout)
         .data_bits(match config.data_bits {
             5 => DataBits::Five,
@@ -52,9 +56,24 @@ pub fn spawn_serial_worker(
             crate::core::FlowControl::Software => SpFlow::Software,
         });
 
-    let port = builder
+    let mut port = builder
         .open()
         .map_err(|e| AppError::Serial(format!("Failed to open {}: {e}", config.port_name)))?;
+
+    // Match typical terminal behavior: assert DTR/RTS so that
+    // devices which rely on these lines (as in PuTTY) will respond.
+    if let Err(e) = port.write_data_terminal_ready(true) {
+        let _ = app_tx.send(AppEvent::SerialError {
+            port_id,
+            error: format!("failed to set DTR: {e}"),
+        });
+    }
+    if let Err(e) = port.write_request_to_send(true) {
+        let _ = app_tx.send(AppEvent::SerialError {
+            port_id,
+            error: format!("failed to set RTS: {e}"),
+        });
+    }
 
     let (tx, rx): (Sender<SerialCommand>, Receiver<SerialCommand>) = mpsc::channel();
 
@@ -68,6 +87,7 @@ pub fn spawn_serial_worker(
     })
 }
 
+#[allow(dead_code)]
 fn worker_loop(
     port_id: PortId,
     mut port: Box<dyn SerialPort>,

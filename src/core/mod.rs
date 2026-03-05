@@ -1,14 +1,11 @@
 use std::time::SystemTime;
 
-use serde::{Deserialize, Serialize};
 use serde_derive::{Deserialize as DeriveDeserialize, Serialize as DeriveSerialize};
 
-use crate::error::Result;
-
 pub mod connections;
+pub mod batch;
 
 pub type PortId = u32;
-pub type TabId = u32;
 
 #[derive(Debug, Clone, DeriveSerialize, DeriveDeserialize)]
 pub enum FlowControl {
@@ -30,6 +27,7 @@ pub enum StopBits {
     Two,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, DeriveSerialize, DeriveDeserialize)]
 pub struct SerialConfig {
     pub port_name: String,
@@ -55,7 +53,7 @@ impl Default for SerialConfig {
             parity: Parity::None,
             flow_control: FlowControl::None,
             timeout_ms: 100,
-            echo: true,
+            echo: false,
             commands_log_path: None,
             responses_log_path: None,
             profile_name: None,
@@ -74,11 +72,13 @@ pub enum MessageKind {
 #[derive(Debug, Clone)]
 pub struct ChatMessage {
     pub timestamp: SystemTime,
+    #[allow(dead_code)]
     pub port_id: Option<PortId>,
     pub kind: MessageKind,
     pub text: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum AppEvent {
     SerialData {
@@ -95,5 +95,4 @@ pub enum AppEvent {
 }
 
 pub type AppEventSender = std::sync::mpsc::Sender<AppEvent>;
-pub type AppEventReceiver = std::sync::mpsc::Receiver<AppEvent>;
 

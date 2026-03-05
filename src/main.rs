@@ -2,11 +2,14 @@ use std::io;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
+mod cli;
 mod core;
 mod error;
 mod serial;
+mod storage;
 mod ui;
 
+use cli::Cli;
 use core::connections::ConnectionManager;
 use core::AppEvent;
 
@@ -15,13 +18,25 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use clap::Parser;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use ui::app::App;
 use ui::input::{handle_key, InputOutcome};
 use ui::view;
 
 fn main() -> io::Result<()> {
-    // Setup terminal
+    let cli = Cli::parse();
+
+    // Batch mode: no TUI, just run and exit.
+    if cli.batch.is_some() {
+        if let Err(err) = run_batch_only(&cli) {
+            eprintln!("Batch error: {err}");
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+
+    // Setup terminal for interactive TUI.
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
@@ -51,7 +66,29 @@ fn run_app<B: ratatui::backend::Backend + 'static>(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let (app_tx, app_rx) = mpsc::channel::<AppEvent>();
     let connections = ConnectionManager::new(app_tx);
-    let mut app = App::new(connections);
+
+    // Load app configuration (including log directory and port profiles).
+    let cfg = storage::config::load_config().unwrap_or_default();
+
+    use std::path::PathBuf;
+    let log_dir: PathBuf = if let Some(dir) = &cfg.default_log_dir {
+        PathBuf::from(dir)
+    } else {
+        let mut dir = storage::config::config_dir().unwrap_or_else(|_| PathBuf::from("."));
+        dir.push("logs");
+        dir
+    };
+
+    let commands_path = log_dir.join("commands.log");
+    let responses_path = log_dir.join("responses.log");
+    let logger = storage::logging::LogHandles::new(Some(commands_path), Some(responses_path));
+
+    let mut app = App::new(connections, logger);
+
+    // Load persisted command history.
+    if let Ok(entries) = storage::history::load_history() {
+        app.history = ui::app::CommandHistory::from_entries(entries);
+    }
     let tick_rate = Duration::from_millis(250);
     let mut last_tick = Instant::now();
 
@@ -79,4 +116,25 @@ fn run_app<B: ratatui::backend::Backend + 'static>(
             last_tick = Instant::now();
         }
     }
+}
+
+fn run_batch_only(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
+    // Load app configuration to determine log directory.
+    let cfg = storage::config::load_config().unwrap_or_default();
+
+    use std::path::PathBuf;
+    let log_dir: PathBuf = if let Some(dir) = &cfg.default_log_dir {
+        PathBuf::from(dir)
+    } else {
+        let mut dir = storage::config::config_dir().unwrap_or_else(|_| PathBuf::from("."));
+        dir.push("logs");
+        dir
+    };
+
+    let commands_path = log_dir.join("commands.log");
+    let responses_path = log_dir.join("responses.log");
+    let logger = storage::logging::LogHandles::new(Some(commands_path), Some(responses_path));
+
+    core::batch::run_batch(cli, &logger)?;
+    Ok(())
 }

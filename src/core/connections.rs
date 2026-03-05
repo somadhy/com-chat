@@ -6,8 +6,9 @@ use serialport::SerialPortInfo;
 
 use crate::core::{AppEventSender, PortId, SerialConfig};
 use crate::error::{AppError, Result};
-use crate::serial::{spawn_serial_worker, SerialCommand, SerialWorkerHandle};
+use crate::serial::{spawn_serial_worker, SerialCommand};
 
+#[allow(dead_code)]
 pub struct PortHandle {
     pub id: PortId,
     pub name: String,
@@ -23,12 +24,14 @@ impl PortHandle {
     }
 }
 
+#[allow(dead_code)]
 pub struct ConnectionManager {
     next_id: PortId,
     ports: HashMap<PortId, PortHandle>,
     app_tx: AppEventSender,
 }
 
+#[allow(dead_code)]
 impl ConnectionManager {
     pub fn new(app_tx: AppEventSender) -> Self {
         Self {
