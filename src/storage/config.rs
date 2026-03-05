@@ -114,9 +114,10 @@ mod tests {
             std::env::set_var("COMCHAT_CONFIG_DIR", dir.path());
         }
 
-        let mut cfg = AppConfig::default();
-        cfg.default_log_dir = Some("logs".to_string());
-        cfg.profiles.push(PortProfile::default());
+        let cfg = AppConfig {
+            default_log_dir: Some("logs".to_string()),
+            profiles: vec![PortProfile::default()],
+        };
 
         save_config(&cfg).expect("save");
         let loaded = load_config().expect("load");

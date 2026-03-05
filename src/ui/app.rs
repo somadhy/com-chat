@@ -240,7 +240,7 @@ impl App {
 
                 // For simplicity use the first port's profile, user can change afterward.
                 let (baud_rate, stop_bits, parity, flow_control, echo) =
-                    if let Some(first) = ports.get(0) {
+                    if let Some(first) = ports.first() {
                         if let Some(p) = cfg.profile_for_port(&first.name) {
                             (
                                 p.baud_rate,
@@ -318,13 +318,19 @@ impl App {
         }
 
         let choice = &state.ports[state.selected];
-        let mut config = SerialConfig::default();
-        config.port_name = choice.name.clone();
-        config.baud_rate = state.baud_rate;
-        config.stop_bits = state.stop_bits.clone();
-        config.parity = state.parity.clone();
-        config.flow_control = state.flow_control.clone();
-        config.echo = state.echo;
+        let config = SerialConfig {
+            port_name: choice.name.clone(),
+            baud_rate: state.baud_rate,
+            data_bits: 8,
+            stop_bits: state.stop_bits.clone(),
+            parity: state.parity.clone(),
+            flow_control: state.flow_control.clone(),
+            timeout_ms: 100,
+            echo: state.echo,
+            commands_log_path: None,
+            responses_log_path: None,
+            profile_name: None,
+        };
 
         // Persist profile for this port.
         let mut cfg = load_config().unwrap_or_default();

@@ -22,7 +22,7 @@ pub fn load_history() -> Result<Vec<String>> {
     let reader = BufReader::new(file);
     let mut entries = Vec::new();
     for line in reader.lines() {
-        let line = line.map_err(|e| AppError::Io(e))?;
+        let line = line.map_err(AppError::Io)?;
         if !line.is_empty() {
             entries.push(line);
         }

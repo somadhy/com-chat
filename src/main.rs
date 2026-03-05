@@ -99,12 +99,13 @@ fn run_app<B: ratatui::backend::Backend + 'static>(
             .checked_sub(last_tick.elapsed())
             .unwrap_or_else(|| Duration::from_secs(0));
 
-        if crossterm::event::poll(timeout)? {
-            if let CEvent::Key(key) = event::read()? {
-                if matches!(handle_key(&mut app, key), InputOutcome::Quit) {
-                    return Ok(());
-                }
-            }
+        if crossterm::event::poll(timeout)?
+            && matches!(
+                event::read()?,
+                CEvent::Key(key) if matches!(handle_key(&mut app, key), InputOutcome::Quit)
+            )
+        {
+            return Ok(());
         }
 
         // Process any pending serial events.
