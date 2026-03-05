@@ -380,32 +380,28 @@ impl App {
         match event {
             AppEvent::SerialData { port_id, data } => {
                 let chunk = String::from_utf8_lossy(&data).into_owned();
-                let buf = self.recv_buffers.entry(port_id).or_insert_with(String::new);
+                let buf = self.recv_buffers.entry(port_id).or_default();
                 buf.push_str(&chunk);
 
                 // We'll collect complete lines first to avoid borrowing `self` reentrantly.
                 let mut completed: Vec<String> = Vec::new();
 
-                loop {
-                    if let Some(idx) = buf.find(|c: char| c == '\n' || c == '\r') {
-                        let line = buf[..idx].trim_end_matches(&['\r', '\n']).to_string();
-                        // Remove this line + its terminator(s) from buffer.
-                        let mut remove_len = 1;
-                        if buf.len() > idx + 1 {
-                            let next = buf.as_bytes()[idx + 1];
-                            if (buf.as_bytes()[idx] == b'\r' && next == b'\n')
-                                || (buf.as_bytes()[idx] == b'\n' && next == b'\r')
-                            {
-                                remove_len = 2;
-                            }
+                while let Some(idx) = buf.find(['\n', '\r']) {
+                    let line = buf[..idx].trim_end_matches(['\r', '\n']).to_string();
+                    // Remove this line + its terminator(s) from buffer.
+                    let mut remove_len = 1;
+                    if buf.len() > idx + 1 {
+                        let next = buf.as_bytes()[idx + 1];
+                        if (buf.as_bytes()[idx] == b'\r' && next == b'\n')
+                            || (buf.as_bytes()[idx] == b'\n' && next == b'\r')
+                        {
+                            remove_len = 2;
                         }
-                        buf.drain(..idx + remove_len);
+                    }
+                    buf.drain(..idx + remove_len);
 
-                        if !line.is_empty() {
-                            completed.push(line);
-                        }
-                    } else {
-                        break;
+                    if !line.is_empty() {
+                        completed.push(line);
                     }
                 }
 
@@ -416,10 +412,10 @@ impl App {
                     // Suppress device echo that exactly repeats the last command
                     // sent to this port. This works both when local echo is on
                     // (we already showed the command as `> ...`) and off.
-                    if let Some(last) = self.last_commands.get(&port_id) {
-                        if last.trim() == line.trim() {
-                            continue;
-                        }
+                    if let Some(last) = self.last_commands.get(&port_id)
+                        && last.trim() == line.trim()
+                    {
+                        continue;
                     }
 
                     self.push_message_for_port(port_id, MessageKind::DeviceResponse, line);
