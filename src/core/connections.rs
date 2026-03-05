@@ -6,7 +6,7 @@ use serialport::SerialPortInfo;
 
 use crate::core::{AppEventSender, PortId, SerialConfig};
 use crate::error::{AppError, Result};
-use crate::serial::{spawn_serial_worker, SerialCommand};
+use crate::serial::{SerialCommand, spawn_serial_worker};
 
 #[allow(dead_code)]
 pub struct PortHandle {
@@ -80,4 +80,3 @@ impl ConnectionManager {
         }
     }
 }
-

@@ -10,18 +10,18 @@ mod storage;
 mod ui;
 
 use cli::Cli;
-use core::connections::ConnectionManager;
 use core::AppEvent;
+use core::connections::ConnectionManager;
 
+use clap::Parser;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event as CEvent},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use clap::Parser;
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{Terminal, backend::CrosstermBackend};
 use ui::app::App;
-use ui::input::{handle_key, InputOutcome};
+use ui::input::{InputOutcome, handle_key};
 use ui::view;
 
 fn main() -> io::Result<()> {

@@ -19,4 +19,3 @@ pub enum AppError {
     #[error("Other error: {0}")]
     Other(String),
 }
-

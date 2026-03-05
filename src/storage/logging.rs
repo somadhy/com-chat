@@ -12,7 +12,10 @@ pub struct LogHandles {
 
 impl LogHandles {
     pub fn new(commands: Option<PathBuf>, responses: Option<PathBuf>) -> Self {
-        Self { commands, responses }
+        Self {
+            commands,
+            responses,
+        }
     }
 
     pub fn log_command(&self, line: &str) -> Result<()> {
@@ -34,11 +37,7 @@ fn append_line(path: &Path, line: &str) -> Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)?;
+    let mut file = OpenOptions::new().create(true).append(true).open(path)?;
     writeln!(file, "{line}")?;
     Ok(())
 }
-

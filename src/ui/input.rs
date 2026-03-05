@@ -22,19 +22,17 @@ pub fn handle_key(app: &mut App, key: KeyEvent) -> InputOutcome {
 
     match &mut app.mode {
         UiMode::Normal => handle_key_normal(app, key),
-        UiMode::PortSelector(state) => {
-            match handle_key_port_selector(state, key) {
-                PortSelectorAction::None => InputOutcome::Continue,
-                PortSelectorAction::Confirm => {
-                    app.confirm_port_selection();
-                    InputOutcome::Continue
-                }
-                PortSelectorAction::Cancel => {
-                    app.cancel_port_selection();
-                    InputOutcome::Continue
-                }
+        UiMode::PortSelector(state) => match handle_key_port_selector(state, key) {
+            PortSelectorAction::None => InputOutcome::Continue,
+            PortSelectorAction::Confirm => {
+                app.confirm_port_selection();
+                InputOutcome::Continue
             }
-        }
+            PortSelectorAction::Cancel => {
+                app.cancel_port_selection();
+                InputOutcome::Continue
+            }
+        },
     }
 }
 
@@ -129,13 +127,8 @@ fn handle_key_port_selector(state: &mut PortSelectorState, key: KeyEvent) -> Por
             state.next_flow_control();
             PortSelectorAction::None
         }
-        KeyCode::Enter => {
-            PortSelectorAction::Confirm
-        }
-        KeyCode::Esc => {
-            PortSelectorAction::Cancel
-        }
+        KeyCode::Enter => PortSelectorAction::Confirm,
+        KeyCode::Esc => PortSelectorAction::Cancel,
         _ => PortSelectorAction::None,
     }
 }
-

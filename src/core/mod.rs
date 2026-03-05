@@ -2,8 +2,8 @@ use std::time::SystemTime;
 
 use serde_derive::{Deserialize as DeriveDeserialize, Serialize as DeriveSerialize};
 
-pub mod connections;
 pub mod batch;
+pub mod connections;
 
 pub type PortId = u32;
 
@@ -81,18 +81,9 @@ pub struct ChatMessage {
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum AppEvent {
-    SerialData {
-        port_id: PortId,
-        data: Vec<u8>,
-    },
-    SerialError {
-        port_id: PortId,
-        error: String,
-    },
-    PortClosed {
-        port_id: PortId,
-    },
+    SerialData { port_id: PortId, data: Vec<u8> },
+    SerialError { port_id: PortId, error: String },
+    PortClosed { port_id: PortId },
 }
 
 pub type AppEventSender = std::sync::mpsc::Sender<AppEvent>;
-

@@ -143,4 +143,3 @@ fn worker_loop(
         std::thread::sleep(timeout);
     }
 }
-

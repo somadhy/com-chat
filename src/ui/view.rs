@@ -1,9 +1,9 @@
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::Line,
     widgets::{Block, Borders, Clear, Paragraph, Tabs},
-    Frame,
 };
 
 use crate::core::{ChatMessage, MessageKind};
@@ -45,8 +45,8 @@ pub fn draw(f: &mut Frame, app: &App) {
         .get(app.active_tab)
         .map(|t| t.messages.iter().map(format_message).collect())
         .unwrap_or_default();
-    let messages_widget = Paragraph::new(messages_lines)
-        .block(Block::default().borders(Borders::ALL).title("Chat"));
+    let messages_widget =
+        Paragraph::new(messages_lines).block(Block::default().borders(Borders::ALL).title("Chat"));
     f.render_widget(messages_widget, chunks[1]);
 
     // Input
@@ -69,8 +69,11 @@ pub fn draw(f: &mut Frame, app: &App) {
     let status_text = format!(
         "COMChat | Port: {port_label} | Echo: {echo_label} | Esc: quit, Ctrl+E: echo, Ctrl+P: ports, Tab/Shift+Tab: switch tab"
     );
-    let status = Paragraph::new(status_text)
-        .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD));
+    let status = Paragraph::new(status_text).style(
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    );
     f.render_widget(status, chunks[3]);
 
     // Optional port selector overlay
@@ -150,4 +153,3 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 
     vertical[1]
 }
-

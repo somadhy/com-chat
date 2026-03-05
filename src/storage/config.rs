@@ -125,4 +125,3 @@ mod tests {
         assert_eq!(loaded.profiles.len(), 1);
     }
 }
-

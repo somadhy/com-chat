@@ -78,4 +78,3 @@ pub fn run_batch(cli: &Cli, logger: &LogHandles) -> Result<()> {
 
     Ok(())
 }
-

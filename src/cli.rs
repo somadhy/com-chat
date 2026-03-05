@@ -22,4 +22,3 @@ pub struct Cli {
     #[arg(long)]
     pub delay_ms: Option<u64>,
 }
-

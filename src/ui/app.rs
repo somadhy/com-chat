@@ -5,7 +5,7 @@ use crate::core::connections::ConnectionManager;
 use crate::core::{
     AppEvent, ChatMessage, FlowControl, MessageKind, Parity, PortId, SerialConfig, StopBits,
 };
-use crate::storage::config::{load_config, AppConfig};
+use crate::storage::config::{AppConfig, load_config};
 use crate::storage::logging::LogHandles;
 
 pub struct CommandHistory {
@@ -22,7 +22,10 @@ impl CommandHistory {
     }
 
     pub fn from_entries(entries: Vec<String>) -> Self {
-        Self { entries, cursor: None }
+        Self {
+            entries,
+            cursor: None,
+        }
     }
 
     pub fn push(&mut self, cmd: String) {
@@ -124,11 +127,7 @@ impl PortSelectorState {
 
     pub fn decrease_baud(&mut self) {
         let current = self.baud_rate;
-        if let Some(&prev) = Self::BAUD_RATES
-            .iter()
-            .rev()
-            .find(|&&b| b < current)
-        {
+        if let Some(&prev) = Self::BAUD_RATES.iter().rev().find(|&&b| b < current) {
             self.baud_rate = prev;
         } else if let Some(&first) = Self::BAUD_RATES.first() {
             self.baud_rate = first;
@@ -240,17 +239,25 @@ impl App {
                 let default_flow = FlowControl::None;
 
                 // For simplicity use the first port's profile, user can change afterward.
-                let (baud_rate, stop_bits, parity, flow_control, echo) = if let Some(first) =
-                    ports.get(0)
-                {
-                    if let Some(p) = cfg.profile_for_port(&first.name) {
-                        (
-                            p.baud_rate,
-                            p.stop_bits.clone(),
-                            p.parity.clone(),
-                            p.flow_control.clone(),
-                            p.echo,
-                        )
+                let (baud_rate, stop_bits, parity, flow_control, echo) =
+                    if let Some(first) = ports.get(0) {
+                        if let Some(p) = cfg.profile_for_port(&first.name) {
+                            (
+                                p.baud_rate,
+                                p.stop_bits.clone(),
+                                p.parity.clone(),
+                                p.flow_control.clone(),
+                                p.echo,
+                            )
+                        } else {
+                            (
+                                default_baud,
+                                default_stop,
+                                default_parity,
+                                default_flow,
+                                false,
+                            )
+                        }
                     } else {
                         (
                             default_baud,
@@ -259,16 +266,7 @@ impl App {
                             default_flow,
                             false,
                         )
-                    }
-                } else {
-                    (
-                        default_baud,
-                        default_stop,
-                        default_parity,
-                        default_flow,
-                        false,
-                    )
-                };
+                    };
 
                 self.mode = UiMode::PortSelector(PortSelectorState {
                     ports,
@@ -354,10 +352,7 @@ impl App {
                         timestamp: SystemTime::now(),
                         port_id: Some(port_id),
                         kind: MessageKind::SystemInfo,
-                        text: format!(
-                            "Opened port {} at {} baud",
-                            choice.name, state.baud_rate
-                        ),
+                        text: format!("Opened port {} at {} baud", choice.name, state.baud_rate),
                     });
                 }
                 self.mode = UiMode::Normal;
@@ -433,11 +428,7 @@ impl App {
                     MessageKind::SystemInfo,
                     "Port closed".to_string(),
                 );
-                if let Some(tab) = self
-                    .tabs
-                    .iter_mut()
-                    .find(|t| t.port_id == Some(port_id))
-                {
+                if let Some(tab) = self.tabs.iter_mut().find(|t| t.port_id == Some(port_id)) {
                     tab.port_id = None;
                     tab.title = format!("{} (closed)", tab.title);
                 }
@@ -447,11 +438,7 @@ impl App {
 
     fn push_message_for_port(&mut self, port_id: PortId, kind: MessageKind, text: String) {
         // Prefer the tab that is explicitly attached to this port.
-        if let Some(tab) = self
-            .tabs
-            .iter_mut()
-            .find(|t| t.port_id == Some(port_id))
-        {
+        if let Some(tab) = self.tabs.iter_mut().find(|t| t.port_id == Some(port_id)) {
             tab.messages.push(ChatMessage {
                 timestamp: SystemTime::now(),
                 port_id: Some(port_id),
@@ -489,20 +476,17 @@ impl App {
         // Echo user command into chat if enabled.
         if self.echo {
             let port_id = self.tabs[active_index].port_id;
-            self.tabs[active_index]
-                .messages
-                .push(ChatMessage {
-                    timestamp: SystemTime::now(),
-                    port_id,
-                    kind: MessageKind::UserCommand,
-                    text: cmd.clone(),
-                });
+            self.tabs[active_index].messages.push(ChatMessage {
+                timestamp: SystemTime::now(),
+                port_id,
+                kind: MessageKind::UserCommand,
+                text: cmd.clone(),
+            });
         }
 
         if let Some(port_id) = self.tabs[active_index].port_id {
             // Remember last command for this port (to optionally suppress device echo).
-            self.last_commands
-                .insert(port_id, cmd.clone());
+            self.last_commands.insert(port_id, cmd.clone());
 
             // Use CRLF (\\r\\n) to match PuTTY and many device CLIs.
             let mut data = cmd.clone().into_bytes();
@@ -511,14 +495,12 @@ impl App {
 
             if let Err(err) = self.connections.write_to_port(port_id, data) {
                 let port_id = self.tabs[active_index].port_id;
-                self.tabs[active_index]
-                    .messages
-                    .push(ChatMessage {
-                        timestamp: SystemTime::now(),
-                        port_id,
-                        kind: MessageKind::Error,
-                        text: format!("Failed to send command: {err}"),
-                    });
+                self.tabs[active_index].messages.push(ChatMessage {
+                    timestamp: SystemTime::now(),
+                    port_id,
+                    kind: MessageKind::Error,
+                    text: format!("Failed to send command: {err}"),
+                });
             }
         } else {
             self.tabs[active_index].messages.push(ChatMessage {
@@ -532,4 +514,3 @@ impl App {
         Some(cmd)
     }
 }
-
