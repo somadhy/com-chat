@@ -82,13 +82,13 @@ jobs:
       - name: Build release binary
         run: cargo build --release
 
-      - name: Package binary
+      - name: Package COMChat binary
         id: package
         shell: bash
         run: |
           set -e
           TAG_VERSION="${GITHUB_REF_NAME#v}"
-          BIN_NAME="meshcorestat"
+          BIN_NAME="COMchat"
 
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             BIN_PATH="target/release/${BIN_NAME}.exe"
